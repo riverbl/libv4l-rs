@@ -13,9 +13,9 @@ use crate::v4l_sys::*;
 /// Stream of mapped buffers
 ///
 /// An arena instance is used internally for buffer handling.
-pub struct Stream<'a> {
+pub struct Stream {
     handle: Arc<Handle>,
-    arena: Arena<'a>,
+    arena: Arena,
     arena_index: usize,
     buf_type: Type,
     buf_meta: Vec<Metadata>,
@@ -24,7 +24,7 @@ pub struct Stream<'a> {
     active: bool,
 }
 
-impl<'a> Stream<'a> {
+impl Stream {
     /// Returns a stream for frame capturing
     ///
     /// # Arguments
@@ -89,7 +89,7 @@ impl<'a> Stream<'a> {
     }
 }
 
-impl<'a> Drop for Stream<'a> {
+impl Drop for Stream {
     fn drop(&mut self) {
         if let Err(e) = self.stop() {
             if let Some(code) = e.raw_os_error() {
@@ -107,7 +107,7 @@ impl<'a> Drop for Stream<'a> {
     }
 }
 
-impl<'a> StreamTrait for Stream<'a> {
+impl StreamTrait for Stream {
     type Item = [u8];
 
     fn start(&mut self) -> io::Result<()> {
@@ -139,7 +139,7 @@ impl<'a> StreamTrait for Stream<'a> {
     }
 }
 
-impl<'a, 'b> CaptureStream<'b> for Stream<'a> {
+impl CaptureStream for Stream {
     fn queue(&mut self, index: usize) -> io::Result<()> {
         let mut v4l2_buf = v4l2_buffer {
             index: index as u32,
@@ -187,7 +187,7 @@ impl<'a, 'b> CaptureStream<'b> for Stream<'a> {
         Ok(self.arena_index)
     }
 
-    fn next(&'b mut self) -> io::Result<(&Self::Item, &Metadata)> {
+    fn next(&mut self) -> io::Result<(&Self::Item, &Metadata)> {
         if !self.active {
             // Enqueue all buffers once on stream start
             for index in 0..self.arena.bufs.len() {
@@ -203,13 +203,14 @@ impl<'a, 'b> CaptureStream<'b> for Stream<'a> {
 
         // The index used to access the buffer elements is given to us by v4l2, so we assume it
         // will always be valid.
-        let bytes = &self.arena.bufs[self.arena_index];
+        let bytes = self.arena.bufs[self.arena_index];
+        let bytes = unsafe { &*bytes };
         let meta = &self.buf_meta[self.arena_index];
         Ok((bytes, meta))
     }
 }
 
-impl<'a, 'b> OutputStream<'b> for Stream<'a> {
+impl OutputStream for Stream {
     fn queue(&mut self, index: usize) -> io::Result<()> {
         let mut v4l2_buf = v4l2_buffer {
             index: index as u32,
@@ -266,7 +267,7 @@ impl<'a, 'b> OutputStream<'b> for Stream<'a> {
         Ok(self.arena_index)
     }
 
-    fn next(&'b mut self) -> io::Result<(&mut Self::Item, &mut Metadata)> {
+    fn next(&mut self) -> io::Result<(&mut Self::Item, &mut Metadata)> {
         let init = !self.active;
         if !self.active {
             self.start()?;
@@ -282,7 +283,8 @@ impl<'a, 'b> OutputStream<'b> for Stream<'a> {
 
         // The index used to access the buffer elements is given to us by v4l2, so we assume it
         // will always be valid.
-        let bytes = &mut self.arena.bufs[self.arena_index];
+        let bytes = self.arena.bufs[self.arena_index];
+        let bytes = unsafe { &mut *bytes };
         let meta = &mut self.buf_meta[self.arena_index];
         Ok((bytes, meta))
     }

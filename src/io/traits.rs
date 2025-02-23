@@ -13,7 +13,7 @@ pub trait Stream {
     fn stop(&mut self) -> io::Result<()>;
 }
 
-pub trait CaptureStream<'a>: Stream {
+pub trait CaptureStream: Stream {
     /// Insert a buffer into the drivers' incoming queue
     fn queue(&mut self, index: usize) -> io::Result<()>;
 
@@ -22,10 +22,10 @@ pub trait CaptureStream<'a>: Stream {
 
     /// Fetch a new frame by first queueing and then dequeueing.
     /// First time initialization is performed if necessary.
-    fn next(&'a mut self) -> io::Result<(&Self::Item, &Metadata)>;
+    fn next(&mut self) -> io::Result<(&Self::Item, &Metadata)>;
 }
 
-pub trait OutputStream<'a>: Stream {
+pub trait OutputStream: Stream {
     /// Insert a buffer into the drivers' incoming queue
     fn queue(&mut self, index: usize) -> io::Result<()>;
 
@@ -34,5 +34,5 @@ pub trait OutputStream<'a>: Stream {
 
     /// Dump a new frame by first queueing and then dequeueing.
     /// First time initialization is performed if necessary.
-    fn next(&'a mut self) -> io::Result<(&mut Self::Item, &mut Metadata)>;
+    fn next(&mut self) -> io::Result<(&mut Self::Item, &mut Metadata)>;
 }

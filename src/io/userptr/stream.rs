@@ -139,7 +139,7 @@ impl StreamTrait for Stream {
     }
 }
 
-impl<'a> CaptureStream<'a> for Stream {
+impl CaptureStream for Stream {
     fn queue(&mut self, index: usize) -> io::Result<()> {
         let buf = &mut self.arena.bufs[index];
         let mut v4l2_buf = v4l2_buffer {
@@ -191,7 +191,7 @@ impl<'a> CaptureStream<'a> for Stream {
         Ok(self.arena_index)
     }
 
-    fn next(&'a mut self) -> io::Result<(&Self::Item, &Metadata)> {
+    fn next(&mut self) -> io::Result<(&Self::Item, &Metadata)> {
         if !self.active {
             // Enqueue all buffers once on stream start
             for index in 0..self.arena.bufs.len() {

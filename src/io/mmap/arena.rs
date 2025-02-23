@@ -10,13 +10,13 @@ use crate::v4l_sys::*;
 ///
 /// All buffers are unmapped in the Drop impl.
 /// In case of errors during unmapping, we panic because there is memory corruption going on.
-pub struct Arena<'a> {
+pub struct Arena {
     handle: Arc<Handle>,
-    pub bufs: Vec<&'a mut [u8]>,
+    pub bufs: Vec<*mut [u8]>,
     pub buf_type: buffer::Type,
 }
 
-impl<'a> Arena<'a> {
+impl Arena {
     /// Returns a new buffer manager instance
     ///
     /// You usually do not need to use this directly.
@@ -94,9 +94,9 @@ impl<'a> Arena<'a> {
     }
 
     pub fn release(&mut self) -> io::Result<()> {
-        for buf in &self.bufs {
+        for &buf in &self.bufs {
             unsafe {
-                v4l2::munmap(buf.as_ptr() as *mut core::ffi::c_void, buf.len())?;
+                v4l2::munmap(buf as *mut core::ffi::c_void, buf.len())?;
             }
         }
 
@@ -118,7 +118,7 @@ impl<'a> Arena<'a> {
     }
 }
 
-impl<'a> Drop for Arena<'a> {
+impl Drop for Arena {
     fn drop(&mut self) {
         if self.bufs.is_empty() {
             // nothing to do
